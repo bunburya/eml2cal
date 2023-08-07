@@ -1,0 +1,31 @@
+# Command to run for kitinerary-extractor (without any extra arguments)
+command = "flatpak run org.kde.kitinerary-extractor"
+
+# Path to directory with additional extractor scripts, if desired
+additional_extractors = "~/kitinerary-extractor-scripts/scripts/"
+
+# Path to a Maildir-formatted directory containing new emails to check
+maildir = "~/Mail"
+
+# Whether to delete emails from the maildir once we are done processing them
+delete_processed_emails = false
+
+# Email addresses to add as attendees to events
+attendees = [
+    "name@example.net"
+]
+
+# The below headings map to those sub-types of Reservation in the schema.org ontology that are supported by KItinerary
+# See https://schema.org/Reservation and https://invent.kde.org/pim/kitinerary/-/blob/master/src/lib/jsapi/jsonld.h
+
+[FoodEstablishmentReservation]
+# Duration to use for an event if no duration or end time is found, in HH:MM:SS format.
+default_duration = "02:00:00"
+# List of alarms to include with event. Expressed as a length of time before the start time, in HH:MM:SS format.
+alarms = ["01:00:00"]
+# List of categories to include with event.
+categories = ["Meal"]
+
+[FlightReservation]
+alarms = ["04:00:00", "01:00:00"]
+categories = ["Travel"]
