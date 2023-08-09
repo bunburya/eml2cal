@@ -4,11 +4,13 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-ics = "*"
+icalendar = "*"
+tomli = "*"
+platformdirs = "*"
+python-dateutil = "*"
 pytz = "*"
+caldav = "1.3.6"
 
 [dev-packages]
-mypy = "*"
 
 [requires]
-python_version = "3.11"
