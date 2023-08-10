@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import json
 import logging
 import sys
 from argparse import ArgumentParser
@@ -14,6 +14,7 @@ from icalendar import Event, Calendar
 from eml2cal.config import get_config, validate_config, ConfigError
 from eml2cal.emails import get_mailbox
 from eml2cal.extractor import build_cmd, extract
+from eml2cal.output import save_events
 from eml2cal.postprocess import reservation_to_ical_event, event_is_valid
 from eml2cal.preprocess import preprocess_email
 from eml2cal.schema_org import is_reservation
@@ -59,13 +60,13 @@ def process_email(email: EmailMessage, config: dict[str, Any]) -> list[Event]:
 def process_mailbox(
         mb: Mailbox,
         config: dict[str, Any]
-) -> Optional[tuple[Calendar, list[dict[str, Union[str, int]]]]]:
+) -> Optional[tuple[list[Event], list[dict[str, Union[str, int]]]]]:
     """Process each email in the given mailbox.
 
     :param mb: The :class:`Mailbox` to iterate for messages to process.
     :param config: A dict containing configuration options (parsed from a config file).
     :return: A tuple containing:
-        0. a :class:`Calendar` containing all events found in the mailbox.
+        0. a list of :class:`Event` objects for events found in the mailbox.
         1. details of the events that were found.
     """
 
@@ -92,17 +93,7 @@ def process_mailbox(
                 "duplicates": dupes
             })
 
-    cal = Calendar()
-    for e in events:
-        cal.add_component(e)
-    return cal, details
-
-
-# Delivery
-
-def print_cal(cal: Calendar):
-    print(cal.to_ical().decode())
-
+    return events, details
 
 def get_argparser() -> ArgumentParser:
     parser = ArgumentParser(
@@ -128,9 +119,11 @@ def main():
         sys.exit(1)
 
     mb = get_mailbox(config)
-    cal, details = process_mailbox(mb, config)
-    print_cal(cal)
-    print(details)
+    events, details = process_mailbox(mb, config)
+    dupes = save_events(events, config)
+    #details.append(dupes)
+    print(json.dumps(details))
+    #print(dupes)
 
 
 if __name__ == "__main__":

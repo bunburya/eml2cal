@@ -1,3 +1,4 @@
+import subprocess
 from datetime import timedelta
 from typing import Optional, Any
 
@@ -34,3 +35,16 @@ def airport_repr(name: Optional[str], iata: Optional[str]) -> Optional[str]:
     else:
         return None
 
+
+def get_pass(pass_name: str, pass_exec: str = "/usr/bin/oass") -> str:
+    """Get a password using the `pass` command line utility.
+
+    :param pass_name: The name of the password as stored in `pass`.
+    :param pass_exec: The path to the `pass` executable to use.
+    :return: The password as a string.
+    """
+    output = subprocess.run([pass_exec, "show", pass_name], capture_output=True)
+    if output.returncode:
+        raise SystemError(output.stderr)
+    else:
+        return output.stdout.decode()
