@@ -12,7 +12,7 @@ from icalendar import Event
 from eml2cal.utils import chained_get
 
 
-@dataclass(slots=True)
+@dataclass
 class EmailSummary:
     """A summary of an email that has been processed (or that we tried to process).
 
@@ -33,7 +33,7 @@ class EmailSummary:
         )
 
 
-@dataclass(slots=True)
+@dataclass
 class EventEmailSummary:
     """A summary of the processing of one email.
 
@@ -56,7 +56,7 @@ class EventEmailSummary:
         )
 
 
-@dataclass(slots=True)
+@dataclass
 class EventSummary:
     """A summary of a calendar event.
 
@@ -81,7 +81,7 @@ class EventSummary:
         )
 
 
-@dataclass(slots=True)
+@dataclass
 class Summary:
     """A summary of the actions taken during one run of eml2cal.
 
