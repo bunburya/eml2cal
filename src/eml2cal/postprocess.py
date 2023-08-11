@@ -62,7 +62,7 @@ def flight_reservation_to_ical_event(reservation_data: dict[str, Any]) -> Option
                 dep_airport["geo"]["longitude"]
             ))
 
-        dep_country = chained_get(dep_airport, "address", "addressCountry")
+        dep_country = chained_get(dep_airport, "address.addressCountry")
         dep_location = "".join([
             f"Terminal {dep_terminal}, " if dep_terminal else "",
             dep_airport_name or "",
@@ -74,8 +74,8 @@ def flight_reservation_to_ical_event(reservation_data: dict[str, Any]) -> Option
         dep_airport_name = None
         dep_airport_iata = None
 
-    arr_airport_name = chained_get(res_for, "arrivalAirport", "name")
-    arr_airport_iata = chained_get(res_for, "arrivalAirport", "iataCode")
+    arr_airport_name = chained_get(res_for, "arrivalAirport.name")
+    arr_airport_iata = chained_get(res_for, "arrivalAirport.iataCode")
     name = "".join([
         "Flight",
         f" {flight_iata}" if flight_iata else "",

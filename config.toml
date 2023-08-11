@@ -1,73 +1,101 @@
-# Command to run for kitinerary-extractor (without any extra arguments)
-command = "flatpak run org.kde.kitinerary-extractor"
+# Example configuration for eml2cal. The configuration is formatted in TOML; https://toml.io/
+# The indentation of sub-sections is optional. Section headers are mandatory, but the ordering of sections is not fixed.
 
-# Path to directory with additional extractor scripts, if desired
-additional_extractors = "~/kitinerary-extractor-scripts/scripts/"
+[mailbox]
+    # Configuring how we get the emails.
 
+    # Path to a Maildir-formatted directory OR an mbox-formatted file, containing new emails to check.
+    # Only one may be specified.
+    maildir = "~/Mail"
+    # mbox = "~/mbox"
 
-[input]
-# Configuration options related to input, ie, how we get the emails.
-
-# Path to a Maildir-formatted directory OR an mbox-formatted file, containing new emails to check.
-# Only one may be specified.
-maildir = "~/Mail"
-# mbox = "~/mbox"
-
-# Whether to delete emails from the maildir once we are done processing them
-delete_processed_emails = false
+    # Whether to delete emails from the maildir once we are done processing them
+    delete_processed_emails = false
 
 
-[output]
-# Configuration options related to output, ie, what we do with the calendar.
+[calendar]
+    # These options determine how events are added to a calendar.
 
-[output.caldav]
-# Use CalDAV client to add events to a calendar directly.
+    [calendar.caldav]
+        # Use CalDAV client to add events to a calendar directly.
 
-# CalDAV server URL
-url = "https://example.org/caldav"
-# Name of calendar (one will be created if not found at the above URL)
-calendar_name = "example_calendar"
-# Username for authenticating with CalDAV server
-username = "example"
-# Command to get password
-password_cmd = "pass show caldav"
+        # CalDAV calendar URL
+        calendar_url = "https://example.net/dav/calendars/"
+        # Username for authenticating with CalDAV server
+        username = "username"
+        # Command to get password
+        password_cmd = "pass show caldav"
 
+
+[logging]
+    # Logging options.
+
+    # Directory to store logs
+    log_dir = "~/.local/state/log/eml2cal"
+    # Verbose logging
+    debug = false
+
+[report]
+    # Options for sending a report of actions taken (events added, etc).
+
+    [report.smtp]
+        # Send a report by email (using SSL/TLS)
+
+        # Email address to send report to
+        to_address = "name@example.net"
+
+        # SMTP server to use to send email
+        server = "smtp.example.org"
+        # Port number for SSL/TLS
+        port = 465
+        # Username on SMTP server
+        username = "example"
+        # Address to send email from (if not provided, username will be used)
+        from_address = "name@example.net"
+        # Shell command to call to get password for SMTP server
+        password_cmd = "/usr/bin/pass show smtp"
 
 [preprocess]
+    # Configuration options related to preprocessing, ie, manipulating the email before it is fed to
+    # kitinerary-extractor.
 
-# Configuration options related to preprocessing, ie, manipulating the email before it is fed to kitinerary-extractor.
+    [preprocess.headers]
 
-[preprocess.headers]
+        # Replace the content of the "From" header with the content of the "X-AnonAddy-Original-Sender" header, if the
+        # latter is present. You can specify further header replacements as desired. This can help to get extractor
+        # scripts to match on emails that have been forwarded.
+        "X-AnonAddy-Original-Sender" = "From"
 
-# Replace the content of the "From" header with the content of the "X-AnonAddy-Original-Sender" header, if the latter is
-# present. You can specify further header replacements as desired. This can help to get extractor scripts to match on
-# emails that have been forwarded.
-"X-AnonAddy-Original-Sender" = "From"
+[extractor]
+    # Configuration of the external programme used to extract data from emails (ie, kitinerary-extractor).
 
+    # Command to run for kitinerary-extractor (without any extra arguments)
+    command = "/usr/bin/flatpak run org.kde.kitinerary-extractor"
+
+    # Path to directory with additional extractor scripts, if desired
+    additional_extractors = "~/kitinerary-extractor-scripts/scripts/"
 
 [postprocess]
+    # Configuration options related to postprocessing, ie, augmenting the data returned by kitinerary-extractor.
 
-# Configuration options related to postprocessing, ie, augmenting the data returned by kitinerary-extractor.
+    # Email addresses to add as attendees to events
+    attendees = [
+        "name@example.net"
+    ]
 
-# Email addresses to add as attendees to events
-attendees = [
-    "name@example.net"
-]
+    # The below sub-headings map to those sub-types of Reservation in the schema.org ontology that are supported by
+    # KItinerary. Configuration options under each sub-heading will apply only where the data returned is of that type.
+    # See https://schema.org/Reservation and https://invent.kde.org/pim/kitinerary/-/blob/master/src/lib/jsapi/jsonld.h
 
-# The below sub-headings map to those sub-types of Reservation in the schema.org ontology that are supported by
-# KItinerary. Configuration options under each sub-heading will apply only where the data returned is of that type.
-# See https://schema.org/Reservation and https://invent.kde.org/pim/kitinerary/-/blob/master/src/lib/jsapi/jsonld.h
+    [postprocess.FoodEstablishmentReservation]
+        # Duration to use for an event if no duration or end time is found, in HH:MM:SS format.
+        default_duration = "02:00:00"
+        # List of alarms to include with event. Expressed as a length of time before the start time, in HH:MM:SS format.
+        alarms = ["01:00:00"]
+        # List of categories to include with event.
+        categories = ["Meal"]
 
-[postprocess.FoodEstablishmentReservation]
+    [postprocess.FlightReservation]
 
-# Duration to use for an event if no duration or end time is found, in HH:MM:SS format.
-default_duration = "02:00:00"
-# List of alarms to include with event. Expressed as a length of time before the start time, in HH:MM:SS format.
-alarms = ["01:00:00"]
-# List of categories to include with event.
-categories = ["Meal"]
-
-[postprocess.FlightReservation]
-
-alarms = ["04:00:00", "01:00:00"]
-categories = ["Travel"]
+        alarms = ["04:00:00", "01:00:00"]
+        categories = ["Travel"]

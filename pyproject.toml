@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eml2cal"
+authors = [
+    {name = "bunburya", email = "dev@bunburya.eu"},
+]
+description = "Generate calendar events from emails"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "icalendar",
+    "tomli",
+    "platformdirs",
+    "python-dateutil",
+    "pytz",
+    "caldav"
+]
+dynamic = ["version"]
+
+
+[project.scripts]
+eml2cal = "eml2cal.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

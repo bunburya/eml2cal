@@ -8,14 +8,16 @@ from typing import Any
 def get_mailbox(config: dict[str, Any]) -> Mailbox:
     """Get a mailbox of the appropriate type."""
     email_factory = BytesParser(policy=default).parse
-    input_conf = config["input"]
+    input_conf = config["mailbox"]
     if "maildir" in input_conf:
-        mdir = input_conf["maildir"]
+        mdir = input_conf.get("maildir")
         mb_class = Maildir
     elif "mbox" in input_conf:
-        mdir = input_conf["mbox"]
+        mdir = input_conf.get("mbox")
         mb_class = mbox
     else:
+        mdir = None
+    if not mdir:
         raise ValueError("Could not find mailbox configuration option.")
     if not os.path.exists(mdir):
         raise ValueError(f"File or directory does not exist: {mdir}")

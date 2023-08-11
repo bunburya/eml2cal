@@ -4,12 +4,16 @@ import shlex
 import subprocess
 from typing import Any
 
+from eml2cal.utils import chained_get
+
 """Function for interacting with kitinerary-extractor."""
 
 
 def build_cmd(config: dict[str, Any]) -> list[str]:
     """Generate the command to run to invoke `kitinerary-extractor`."""
-    cmd = shlex.split(config["command"])
+    cmd = shlex.split(chained_get(config, "extractor.command", ""))
+    if not cmd:
+        raise ValueError("Configuration file must specify extractor command to use.")
     if "additional_extractors" in config:
         cmd.extend(["--additional-search-path", os.path.expanduser(config["additional_extractors"])])
     return cmd

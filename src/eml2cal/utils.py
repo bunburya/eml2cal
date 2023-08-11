@@ -3,8 +3,14 @@ from datetime import timedelta
 from typing import Optional, Any
 
 
-def chained_get(d: dict[str, Any], *keys, default: Any = None) -> Any:
-    """Convenience function to access attributes of nested dicts."""
+def chained_get(d: dict[str, Any], key: str, default: Any = None) -> Any:
+    """Convenience function to access attributes of nested dicts.
+
+    :param d: The dict to search.
+    :param key: A string containing the chain of attribute names to search for, separately by `.`.
+    :param default: A value to return if nothing is found at the requested location.
+    """
+    keys = key.split(".")
     result = d.get(keys[0], {})
     for k in keys[1:]:
         if k in result:
