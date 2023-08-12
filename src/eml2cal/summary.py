@@ -152,6 +152,7 @@ def send_report(config: dict[str, Any], summary: Summary):
     msg["Subject"] = f"[eml2cal] Action report: {now}"
     msg.set_content(summary.to_text())
     context = ssl.create_default_context()
-    with smtplib.SMTP_SSL(server, port, context=context) as server:
-        server.login(uname, passwd)
-        server.send_message(msg)
+    server = smtplib.SMTP(server, port)
+    server.starttls(context=context)
+    server.login(uname, passwd)
+    server.send_message(msg)

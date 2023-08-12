@@ -46,8 +46,8 @@
 
         # SMTP server to use to send email
         server = "smtp.example.org"
-        # Port number for SSL/TLS
-        port = 465
+        # Port number for STARTTLS
+        port = 587
         # Username on SMTP server
         username = "example"
         # Address to send email from (if not provided, username will be used)

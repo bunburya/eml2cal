@@ -22,7 +22,7 @@ def get_argparser() -> ArgumentParser:
         description="Generate calendar events from emails"
     )
     parser.add_argument("-c", "--config", metavar="PATH", help="Path to config file to use.",
-                        default=platformdirs.user_config_dir("eml2cal"))
+                        default=os.path.join(platformdirs.user_config_dir("eml2cal"), "config.toml"))
     return parser
 
 
@@ -58,6 +58,7 @@ def main():
             mb.clear()
             mb.close()
     except Exception as e:
-        logger.critical(f"Encountered uncaught exception: {e.with_traceback()}")
-        sys.stdout.write(f"Encountered fatal error. Check logs for further details: {e}")
+        logger.critical(f"Encountered uncaught exception: {e}")
+        logger.exception(e)
+        sys.stdout.write(f"Encountered fatal error. Check logs for further details: {e}\n")
         sys.exit(1)

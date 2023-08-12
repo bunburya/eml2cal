@@ -10,10 +10,10 @@ def get_mailbox(config: dict[str, Any]) -> Mailbox:
     email_factory = BytesParser(policy=default).parse
     input_conf = config["mailbox"]
     if "maildir" in input_conf:
-        mdir = input_conf.get("maildir")
+        mdir = os.path.expanduser(input_conf.get("maildir"))
         mb_class = Maildir
     elif "mbox" in input_conf:
-        mdir = input_conf.get("mbox")
+        mdir = os.path.expanduser(input_conf.get("mbox"))
         mb_class = mbox
     else:
         mdir = None
