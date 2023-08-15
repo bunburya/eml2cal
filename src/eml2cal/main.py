@@ -6,6 +6,8 @@ import platformdirs
 from argparse import ArgumentParser
 from datetime import datetime
 
+from icalendar import Event, Calendar
+
 from eml2cal.config import get_config
 from eml2cal.mail import get_mailbox
 from eml2cal.calendar import save_events
@@ -23,8 +25,17 @@ def get_argparser() -> ArgumentParser:
     )
     parser.add_argument("-c", "--config", metavar="PATH", help="Path to config file to use.",
                         default=os.path.join(platformdirs.user_config_dir("eml2cal"), "config.toml"))
+    parser.add_argument("-t", "--test", action="store_true", 
+                        help="Print resulting iCalendar file rather than adding to a dictionary.")
     return parser
 
+
+def make_calendar(events: list[Event]) -> Calendar:
+    """Make a :class:`Calendar` object from a list of :class:`Event`s."""
+    cal = Calendar()
+    for e in events:
+        cal.add_component(e)
+    return cal
 
 def main():
     try:
@@ -49,14 +60,17 @@ def main():
         mb = get_mailbox(config)
         summary = Summary(start_time=datetime.now())
         events = process_mailbox(mb, config, summary)
-        save_events(events, config, summary)
-        if summary.extracted or summary.conflicts or summary.errors:
-            send_report(config, summary)
-        if chained_get(config, "mailbox.delete_processed_emails", False):
-            logging.info("Deleting all emails in mailbox.")
-            mb.lock()
-            mb.clear()
-            mb.close()
+        if ns.test:
+            print(make_calendar(events).to_ical().decode())
+        else:
+            save_events(events, config, summary)
+            if summary.extracted or summary.conflicts or summary.errors:
+                send_report(config, summary)
+            if chained_get(config, "mailbox.delete_processed_emails", False):
+                logging.info("Deleting all emails in mailbox.")
+                mb.lock()
+                mb.clear()
+                mb.close()
     except Exception as e:
         logger.critical(f"Encountered uncaught exception: {e}")
         logger.exception(e)

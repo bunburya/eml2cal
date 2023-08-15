@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Callable, Any, Optional
 
 from icalendar import Event, Alarm, vCalAddress, vText
@@ -7,6 +7,24 @@ from pytz import utc
 from eml2cal.config import get_res_conf_option
 from eml2cal.schema_org import parse_datetime
 from eml2cal.utils import parse_duration, chained_get, airport_repr
+
+
+def get_times(reservation: dict[str, Any]) -> tuple[Optional[datetime], Optional[datetime]]:
+    """Get the start and end time of a reservation, first checking the reservation dict itself
+    and then checking the event dict.
+    """
+    
+    found = {"start": None, "end": None}
+    for s in ("start", "end"):
+        for k in (s+"Time", s+"Date"):
+            for d in (reservation, reservation.get("reservationFor", {})):
+                if (f := d.get(k)) and not found.get(s):
+                    found[s] = parse_datetime(f)
+                    if found["start"] and found["end"]:
+                        break
+    return found["start"], found["end"]
+
+
 
 
 def generic_reservation_to_ical_event(reservation: dict[str, Any]) -> Optional[Event]:
@@ -20,14 +38,16 @@ def generic_reservation_to_ical_event(reservation: dict[str, Any]) -> Optional[E
     """
     res_for = reservation["reservationFor"]
     event = Event()
-    # Assume that reservationFor is of type Event (technically it could be any Thing, but I believe KItinerary will
-    # always produce an Event)
+    
+    dtstart, dtend = get_times(reservation)
+    if dtstart:
+        event.add("dtstart", dtstart)
+    if dtend:
+        event.add("dtend", dtend)
+
     if "name" in res_for:
         event.add("summary", res_for["name"])
-    if "startDate" in res_for:
-        event.add("dtstart", parse_datetime(res_for["startDate"]))
-    if "endDate" in res_for:
-        event.add("dtend", parse_datetime(res_for["endDate"]))
+    
     return event
 
 
