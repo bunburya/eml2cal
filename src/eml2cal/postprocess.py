@@ -1,22 +1,23 @@
+from collections import OrderedDict
 from datetime import date, datetime
 from typing import Callable, Any, Optional
 
-from icalendar import Event, Alarm, vCalAddress, vText
+from icalendar import Event, Alarm, vCalAddress, vText, vGeo
 from pytz import utc
 
 from eml2cal.config import get_res_conf_option
 from eml2cal.schema_org import parse_datetime
-from eml2cal.utils import parse_duration, chained_get, airport_repr
+from eml2cal.utils import parse_duration, chained_get, airport_repr, augment_description
 
 
 def get_times(reservation: dict[str, Any]) -> tuple[Optional[datetime], Optional[datetime]]:
     """Get the start and end time of a reservation, first checking the reservation dict itself
     and then checking the event dict.
     """
-    
+
     found = {"start": None, "end": None}
     for s in ("start", "end"):
-        for k in (s+"Time", s+"Date"):
+        for k in (s + "Time", s + "Date"):
             for d in (reservation, reservation.get("reservationFor", {})):
                 if (f := d.get(k)) and not found.get(s):
                     found[s] = parse_datetime(f)
@@ -25,6 +26,41 @@ def get_times(reservation: dict[str, Any]) -> tuple[Optional[datetime], Optional
     return found["start"], found["end"]
 
 
+def get_location(reservation: dict[str, Any]) -> tuple[Optional[str], Optional[tuple[float, float]]]:
+    """Get the location of a reservation, by checking its ``reservationFor`` attribute.
+
+    :return: A tuple containing the location's address and coordinates (in each case, if present)."""
+    address_dict = chained_get(
+        reservation,
+        "reservationFor.address",
+        chained_get(reservation, "reservationFor.location.address")
+    )
+    if address_dict:
+        address_lines = []
+        for k in ("streetAddress", "addressLocality", "postalCode", "addressCountry"):
+            if k in address_dict:
+                address_lines.append(address_dict[k])
+        address = ". ".join(address_lines)
+    else:
+        address = None
+    geo_dict = chained_get(reservation, "reservationFor.geo", chained_get(reservation, "reservationFor.location.geo"))
+    if geo_dict:
+        geo = geo_dict["latitude"], geo_dict["longitude"]
+    else:
+        geo = None
+    return address, geo
+
+
+def get_action_urls(reservation: dict[str, Any]) -> Optional[OrderedDict[str, str]]:
+    """Get URLs for performing certain actions on the reservation."""
+
+    if "potentialAction" not in reservation:
+        return None
+    actions = OrderedDict()
+    for a in reservation["potentialAction"]:
+        if "target" in a:
+            actions[a["@type"]] = a["target"]
+    return actions
 
 
 def generic_reservation_to_ical_event(reservation: dict[str, Any]) -> Optional[Event]:
@@ -38,35 +74,56 @@ def generic_reservation_to_ical_event(reservation: dict[str, Any]) -> Optional[E
     """
     res_for = reservation["reservationFor"]
     event = Event()
-    
+
     dtstart, dtend = get_times(reservation)
     if dtstart:
         event.add("dtstart", dtstart)
     if dtend:
         event.add("dtend", dtend)
 
+    location, geo = get_location(reservation)
+    if location:
+        event.add("location", location)
+    if geo:
+        event.add("geo", geo)
+
     if "name" in res_for:
         event.add("summary", res_for["name"])
-    
+
+    desc_lines = []
+    if res_num := reservation.get("reservationNumber"):
+        desc_lines.append(f"Reservation number: {res_num}")
+    actions = get_action_urls(reservation)
+    if actions:
+        for a in actions:
+            aname = a.rstrip("Action")
+            url = actions[a]
+            desc_lines.append(f"{aname}: {url}")
+    if desc_lines:
+        event.add("description", "\n".join(desc_lines))
+
     return event
 
 
-def flight_reservation_to_ical_event(reservation_data: dict[str, Any]) -> Optional[Event]:
+def flight_reservation_to_ical_event(reservation: dict[str, Any]) -> Optional[Event]:
     """Extract details from a dict representing a FlightReservation.
 
-    :param reservation_data: A dict corresponding to a schema.org FlightReservation (as constructed from the JSON-LD
+    :param reservation: A dict corresponding to a schema.org FlightReservation (as constructed from the JSON-LD
         produced by KItinerary).
     :return: An :class:`Event` object containing the key details.
     """
-    event = generic_reservation_to_ical_event(reservation_data)
-    res_for = reservation_data["reservationFor"]
+    event = generic_reservation_to_ical_event(reservation)
+    res_for = reservation["reservationFor"]
 
-    if dep_time := res_for.get("departureTime"):
-        event.add("dtstart", parse_datetime(dep_time))
-    elif dep_day := res_for.get("departureDay"):
-        event.add("dtstart", date.fromisoformat(dep_day))
-    else:
-        return
+    if "dtstart" not in event:
+        if dep_time := res_for.get("departureTime"):
+            event.add("dtstart", parse_datetime(dep_time))
+        elif dep_day := res_for.get("departureDay"):
+            event.add("dtstart", date.fromisoformat(dep_day))
+        else:
+            return
+    if ("dtend" not in event) and ("arrivalTime" in res_for):
+        event.add("dtend", parse_datetime(res_for["arrivalTime"]).astimezone(utc))
 
     airline_iata = res_for.get("airline", {}).get("iataCode", "")
     flight_iata = airline_iata + res_for.get("flightNumber")
@@ -77,10 +134,7 @@ def flight_reservation_to_ical_event(reservation_data: dict[str, Any]) -> Option
         dep_airport_iata = dep_airport.get("iataCode")
         dep_terminal = res_for.get("departureTerminal")
         if "geo" in dep_airport:
-            event.add("geo", (
-                dep_airport["geo"]["latitude"],
-                dep_airport["geo"]["longitude"]
-            ))
+            event["geo"] = vGeo((dep_airport["geo"]["latitude"], dep_airport["geo"]["longitude"]))
 
         dep_country = chained_get(dep_airport, "address.addressCountry")
         dep_location = "".join([
@@ -89,7 +143,7 @@ def flight_reservation_to_ical_event(reservation_data: dict[str, Any]) -> Option
             f" ({dep_airport_iata})" if dep_airport_iata else "",
             f", {dep_country}" if dep_country else ""
         ])
-        event.add("location", dep_location)
+        event["location"] = vText(dep_location)
     else:
         dep_airport_name = None
         dep_airport_iata = None
@@ -104,28 +158,44 @@ def flight_reservation_to_ical_event(reservation_data: dict[str, Any]) -> Option
         f" to ",
         airport_repr(arr_airport_name, arr_airport_iata) or "[unknown]"
     ])
-    event.add("summary", name)
+    event["summary"] = vText(name)
 
-    if "arrivalTime" in res_for:
-        event.add("dtend", parse_datetime(res_for["arrivalTime"]).astimezone(utc))
-
-    res_num = reservation_data.get("reservationNumber")
+    res_num = reservation.get("reservationNumber")
     if res_num:
         event.add("description", f"{name}\nReservation number: {res_num}")
 
     return event
 
 
+def lodging_reservation_to_ical_event(reservation: dict[str, Any]) -> Optional[Event]:
+    """Extract details from a dict representing a LodgingReservation.
+
+    :param reservation: A dict corresponding to a schema.org LodgingReservation (as constructed from the JSON-LD
+        produced by KItinerary).
+    :return: An :class:`Event` object containing the key details.
+    """
+    event = generic_reservation_to_ical_event(reservation)
+    if not "dtstart" in event:
+        if checkin := reservation.get("checkinTime"):
+            event.add("dtstart", parse_datetime(checkin))
+        else:
+            return
+    if ("dtend" not in event) and (checkout := reservation.get("checkoutTime")):
+        event.add("dtend", parse_datetime(checkout))
+    return event
+
+
 converters: dict[str, Callable[[dict[str, Any]], Optional[Event]]] = {
-    "FlightReservation": flight_reservation_to_ical_event
+    "FlightReservation": flight_reservation_to_ical_event,
+    "LodgingReservation": lodging_reservation_to_ical_event
 }
 
 
-def reservation_to_ical_event(reservation_data: dict[str, Any], config: dict[str, Any]) -> Event:
+def reservation_to_ical_event(reservation: dict[str, Any], config: dict[str, Any]) -> Event:
     """Parse a single reservation dict into an :class:`Event`."""
-    res_type = reservation_data["@type"]
+    res_type = reservation["@type"]
     parser = converters.get(res_type, generic_reservation_to_ical_event)
-    event = parser(reservation_data)
+    event = parser(reservation)
     if event:
         augment_event(event, config, res_type)
     return event

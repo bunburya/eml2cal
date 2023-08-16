@@ -2,6 +2,8 @@ import subprocess
 from datetime import timedelta
 from typing import Optional, Any
 
+from icalendar import Event, vText
+
 
 def chained_get(d: dict[str, Any], key: str, default: Any = None) -> Any:
     """Convenience function to access attributes of nested dicts.
@@ -54,3 +56,12 @@ def get_pass(pass_name: str, pass_exec: str = "/usr/bin/oass") -> str:
         raise SystemError(output.stderr)
     else:
         return output.stdout.decode()
+
+
+def augment_description(event: Event, lines: list[str]):
+    """Add lines to the description of an event."""
+    desc = event.get("description", "")
+    if not desc.endswith("\n"):
+        desc += "\n"
+    desc += "\n".join(lines)
+    event["description"] = vText(desc)
