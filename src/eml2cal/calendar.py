@@ -22,9 +22,7 @@ def get_conflicts(cal: caldav.Calendar, event: icalendar.Event):
 
     :return: A list of conflicting :class:`icalendar.Event` objects, as retrieved from the CalDAV server.
     """
-    logger.debug(f"EVENT NAME: {event.get('summary')}")
     start: Optional[date] = getattr(event.get("dtstart"), "dt", None)
-    logger.debug(f"START: {start}")
     if start is None:
         raise ValueError("Event must have start date.")
     end: Optional[date] = getattr(event.get("dtend"), "dt", None)
@@ -59,7 +57,8 @@ def add_events_to_cal(cal: caldav.Calendar, events: list[icalendar.Event], summa
         event_name = e.get("summary", "[no summary]")
         conflicts = get_conflicts(cal, e)
         if not conflicts:
-            cal.save_event(e.to_ical().decode())
+            ical_str = e.to_ical().decode()
+            cal.save_event(ical_str)
             logger.debug(f"Added event {event_name} to calendar {cal_name}.")
             added.append(e)
         else:

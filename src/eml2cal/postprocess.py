@@ -162,7 +162,7 @@ def flight_reservation_to_ical_event(reservation: dict[str, Any]) -> Optional[Ev
 
     res_num = reservation.get("reservationNumber")
     if res_num:
-        event.add("description", f"{name}\nReservation number: {res_num}")
+        augment_description(event, f"{name}\nReservation number: {res_num}")
 
     return event
 
