@@ -27,6 +27,8 @@ def get_argparser() -> ArgumentParser:
                         default=os.path.join(platformdirs.user_config_dir("eml2cal"), "config.toml"))
     parser.add_argument("-t", "--test", action="store_true", 
                         help="Print resulting iCalendar file rather than adding to a dictionary.")
+    parser.add_argument("-f", "--file", nargs="*",
+                        help="Parse emails in given file(s) rather than from mailbox.")
     return parser
 
 
