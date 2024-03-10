@@ -14,8 +14,8 @@ def build_cmd(config: dict[str, Any]) -> list[str]:
     cmd = shlex.split(chained_get(config, "extractor.command", ""))
     if not cmd:
         raise ValueError("Configuration file must specify extractor command to use.")
-    if "additional_extractors" in config:
-        cmd.extend(["--additional-search-path", os.path.expanduser(config["additional_extractors"])])
+    if extra := chained_get(config, "extractor.additional_extractors"):
+        cmd.extend(["--additional-search-path", os.path.expanduser(extra)])
     return cmd
 
 

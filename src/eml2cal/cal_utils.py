@@ -26,8 +26,9 @@ def get_conflicts(cal: caldav.Calendar, event: icalendar.Event):
     if start is None:
         raise ValueError("Event must have start date.")
     end: Optional[date] = getattr(event.get("dtend"), "dt", None)
+    logger.debug(f"END: {end}")
 
-    # Convert dates datetimes: `start` becomes the start of the day, `end` becomes the start of the next day.
+    # Convert dates to datetimes: `start` becomes the start of the day, `end` becomes the start of the next day.
     # This is a bit hacky and probably vulnerable to corner cases but is basically intended to ensure we can properly
     # search for conflicting events in the calendar.
     if not isinstance(start, datetime):

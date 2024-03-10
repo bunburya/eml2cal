@@ -1,8 +1,9 @@
 import logging
 from datetime import datetime
+from email import policy
 from email.message import EmailMessage
-from mailbox import Mailbox
-from typing import Any, Optional
+from email.parser import BytesParser
+from typing import Any, Optional, Iterable, Generator
 
 from icalendar import Event
 
@@ -13,6 +14,13 @@ from eml2cal.schema_org import is_reservation
 from eml2cal.summary import Summary, EmailSummary, EventEmailSummary
 
 logger = logging.getLogger(__name__)
+
+
+def from_files(files: list[str]) -> Generator[EmailMessage, None, None]:
+    """A generator that yields :class:`EmailMessage` objects created from the given files."""
+    for f in files:
+        with open(f, "rb") as fp:
+            yield BytesParser(policy=policy.default).parsebytes(fp.read())
 
 
 def process_email(email: EmailMessage, config: dict[str, Any]) -> list[Event]:
@@ -52,10 +60,15 @@ def process_email(email: EmailMessage, config: dict[str, Any]) -> list[Event]:
     return valid_events
 
 
-def process_mailbox(mb: Mailbox, config: dict[str, Any], summary: Summary) -> Optional[list[Event]]:
+def process_emails(
+        emails: Iterable[EmailMessage],
+        config: dict[str, Any],
+        summary: Summary
+) -> Optional[list[Event]]:
     """Process each email in the given mailbox.
 
-    :param mb: The :class:`Mailbox` to iterate for messages to process.
+    :param emails: An iterable of :class:`EmailMessage` objects to process (for example, a :class:`mailbox.Mailbox`
+        object).
     :param config: A dict containing configuration options (parsed from a config file).
     :param summary: A summary that will be updated in-place with details obtained during processing.
     :return: A tuple containing:
@@ -64,7 +77,7 @@ def process_mailbox(mb: Mailbox, config: dict[str, Any], summary: Summary) -> Op
     """
     events: list[Event] = []
     added_times: set[tuple[datetime, datetime]] = set()
-    for msg in mb:
+    for msg in emails:
         summary.checked.append(EmailSummary.from_email(msg))
         try:
             preprocess_email(msg, config)
@@ -86,7 +99,7 @@ def process_mailbox(mb: Mailbox, config: dict[str, Any], summary: Summary) -> Op
                 summary.extracted.append(EventEmailSummary.from_email_and_stats(msg, len(new_events), uniques))
         except Exception as e:
             logger.error(f"Encountered error when processing email: {e}")
-            summary.errors.append(msg)
+            summary.errors.append(EmailSummary.from_email(msg))
             continue
     summary.end_time = datetime.now()
 
