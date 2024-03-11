@@ -93,8 +93,9 @@ def generic_reservation_to_ical_event(reservation: dict[str, Any]) -> Optional[E
     desc_lines = []
     if res_num := reservation.get("reservationNumber"):
         desc_lines.append(f"Reservation number: {res_num}")
+
     actions = get_action_urls(reservation)
-    if actions:
+    if actions:  # actions could be None so this checks that it is not None as well as not empty
         for a in actions:
             aname = a.rstrip("Action")
             url = actions[a]
@@ -162,7 +163,7 @@ def flight_reservation_to_ical_event(reservation: dict[str, Any]) -> Optional[Ev
 
     res_num = reservation.get("reservationNumber")
     if res_num:
-        augment_description(event, f"{name}\nReservation number: {res_num}")
+        augment_description(event, [f"{name}\nReservation number: {res_num}"])
 
     return event
 

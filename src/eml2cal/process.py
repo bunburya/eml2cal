@@ -79,28 +79,23 @@ def process_emails(
     added_times: set[tuple[datetime, datetime]] = set()
     for msg in emails:
         summary.checked.append(EmailSummary.from_email(msg))
-        try:
-            preprocess_email(msg, config)
-            new_events = process_email(msg, config)
-            uniques = 0
-            dupes = 0
-            for e in new_events:
-                t = (e.get("dtstart"), e.get("dtend"))
-                if t not in added_times:
-                    events.append(e)
-                    added_times.add(t)
-                    uniques += 1
-                else:
-                    dupes += 1
-            if dupes + uniques != len(new_events):
-                logging.warning(f"Number of duplicates ({dupes}) + number of uniques ({uniques}) does not equal number "
-                                f"of found events ({len(new_events)}.")
-            if new_events:
-                summary.extracted.append(EventEmailSummary.from_email_and_stats(msg, len(new_events), uniques))
-        except Exception as e:
-            logger.error(f"Encountered error when processing email: {e}")
-            summary.errors.append(EmailSummary.from_email(msg))
-            continue
+        preprocess_email(msg, config)
+        new_events = process_email(msg, config)
+        uniques = 0
+        dupes = 0
+        for e in new_events:
+            t = (e.get("dtstart"), e.get("dtend"))
+            if t not in added_times:
+                events.append(e)
+                added_times.add(t)
+                uniques += 1
+            else:
+                dupes += 1
+        if dupes + uniques != len(new_events):
+            logging.warning(f"Number of duplicates ({dupes}) + number of uniques ({uniques}) does not equal number "
+                            f"of found events ({len(new_events)}.")
+        if new_events:
+            summary.extracted.append(EventEmailSummary.from_email_and_stats(msg, len(new_events), uniques))
     summary.end_time = datetime.now()
 
     return events
