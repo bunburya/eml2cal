@@ -29,26 +29,30 @@ def get_times(reservation: dict[str, Any]) -> tuple[Optional[datetime], Optional
 def get_location(reservation: dict[str, Any]) -> tuple[Optional[str], Optional[tuple[float, float]]]:
     """Get the location of a reservation, by checking its ``reservationFor`` attribute.
 
-    :return: A tuple containing the location's address and coordinates (in each case, if present)."""
+    :return: A tuple containing the location's address as a string and coordinates (in each case, if present)."""
+
+    loc_lines = []
+    loc_name = chained_get(reservation, "reservationFor.location.name")
+    if loc_name:
+        loc_lines.append(loc_name)
     address_dict = chained_get(
         reservation,
         "reservationFor.address",
         chained_get(reservation, "reservationFor.location.address")
     )
     if address_dict:
-        address_lines = []
         for k in ("streetAddress", "addressLocality", "postalCode", "addressCountry"):
             if k in address_dict:
-                address_lines.append(address_dict[k])
-        address = ". ".join(address_lines)
+                loc_lines.append(address_dict[k])
+        loc_str = ", ".join(loc_lines)
     else:
-        address = None
+        loc_str = None
     geo_dict = chained_get(reservation, "reservationFor.geo", chained_get(reservation, "reservationFor.location.geo"))
     if geo_dict:
         geo = geo_dict["latitude"], geo_dict["longitude"]
     else:
         geo = None
-    return address, geo
+    return loc_str, geo
 
 
 def get_action_urls(reservation: dict[str, Any]) -> Optional[OrderedDict[str, str]]:
