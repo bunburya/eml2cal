@@ -78,9 +78,14 @@ def process_emails(
     events: list[Event] = []
     added_times: set[tuple[datetime, datetime]] = set()
     for msg in emails:
-        summary.checked.append(EmailSummary.from_email(msg))
+        eml_summary = EmailSummary.from_email(msg)
+        summary.checked.append(eml_summary)
         preprocess_email(msg, config)
-        new_events = process_email(msg, config)
+        try:
+            new_events = process_email(msg, config)
+        except Exception as e:
+            summary.errors.append(eml_summary)
+            continue
         uniques = 0
         dupes = 0
         for e in new_events:

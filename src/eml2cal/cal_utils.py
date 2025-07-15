@@ -1,6 +1,7 @@
 import logging
 import shlex
 import subprocess
+import time
 from datetime import timedelta, datetime, date
 from typing import Optional, Any
 
@@ -66,6 +67,7 @@ def add_events_to_cal(cal: caldav.Calendar, events: list[icalendar.Event], summa
             logger.error(f"Event {event_name} conflicts with {len(conflicts)} events in calendar {cal_name}. "
                          "Did not add.")
             summary.conflicts.append(EventSummary.from_event(e, len(conflicts)))
+        time.sleep(1)
     return added
 
 

@@ -71,7 +71,10 @@ def main():
     if ns.test:
         print(make_calendar(events).to_ical().decode())
     else:
-        save_events(events, config, summary)
+        try:
+            save_events(events, config, summary)
+        except:
+            logger.exception("Encountered error when saving events to calendar.")
         if summary.extracted or summary.conflicts or summary.errors:
             send_report(config, summary)
         if is_mb and chained_get(config, "mailbox.delete_processed_emails", False):
