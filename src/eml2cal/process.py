@@ -55,15 +55,16 @@ def process_email(email: EmailMessage, config: dict[str, Any]) -> list[Event]:
                 valid_events.append(e)
             else:
                 non_events += 1
+        logger.debug(f"{len(valid_events)} of which are valid.")
     if non_events:
-        logger.debug(f"{non_events} reservations could not be converted to events.")
+        logger.debug(
+            f"{non_events} reservations could not be converted to valid events."
+        )
     return valid_events
 
 
 def process_emails(
-        emails: Iterable[EmailMessage],
-        config: dict[str, Any],
-        summary: Summary
+    emails: Iterable[EmailMessage], config: dict[str, Any], summary: Summary
 ) -> Optional[list[Event]]:
     """Process each email in the given mailbox.
 
@@ -97,10 +98,14 @@ def process_emails(
             else:
                 dupes += 1
         if dupes + uniques != len(new_events):
-            logging.warning(f"Number of duplicates ({dupes}) + number of uniques ({uniques}) does not equal number "
-                            f"of found events ({len(new_events)}.")
+            logging.warning(
+                f"Number of duplicates ({dupes}) + number of uniques ({uniques}) does not equal number "
+                f"of found events ({len(new_events)}."
+            )
         if new_events:
-            summary.extracted.append(EventEmailSummary.from_email_and_stats(msg, len(new_events), uniques))
+            summary.extracted.append(
+                EventEmailSummary.from_email_and_stats(msg, len(new_events), uniques)
+            )
     summary.end_time = datetime.now()
 
     return events
